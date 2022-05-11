@@ -27,4 +27,3 @@ the files in the tmp directory are read as mbox files, and also
 synced with your archive. (synced with the imap folder 
 <prefix>.SEND.<file>)
 
-
