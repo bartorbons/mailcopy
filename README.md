@@ -27,3 +27,33 @@ the files in the tmp directory are read as mbox files, and also
 synced with your archive. (synced with the imap folder 
 <prefix>.SEND.<file>)
 
+Prerequisites:
+You have set up somewhere some mailarchive where you want to
+store your mail. I have set up a dovecot server on some virtual
+machine, but your choise, your option.
+You should be running this software for some kind of unix-type
+machine. Where you have perl running, with the folliwing perl
+modules installed. Whether you have them installed through some
+packagemananger for your system, or through some cpan variants
+does not matter.
+Config::File
+Data::Dumper
+IO::Socket::SSL
+Net::IMAP::Client
+DateTime::Format::DateParse
+Mail::Mbox::MessageParser
+Mail::POP3Client
+
+to run the tests, the following perl modules are needed:
+Test::MockObject
+Test::More
+Test::Exception
+
+
+
+
+INSTALLING
+Install the files in this repo in some subdir under your homedir
+on your system. Create a config file in the etc directory for each
+mailserver you are archiving.
+
