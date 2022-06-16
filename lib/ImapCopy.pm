@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
 use strict;
 use warnings;
 
@@ -11,9 +11,6 @@ my $allowed_keys = {
     prefix           => {required => 1},
     folder_separator => {required => 1},
     debug            => {required => 1},
-    diff             => {required => 0},
-    from_message_ids => {required => 0},
-    to_message_ids   => {required => 0}
 };
 
 
@@ -102,6 +99,7 @@ sub log {
 
 sub run {
   my $self = shift;
+
   my $from = $self->get("from");
   my $to   = $self->get("to");
 
@@ -111,19 +109,14 @@ sub run {
   my $fcounter;
 
   foreach my $folder (@folders) {
-    #clean up previous folder data....
-    $self->set("from_message_ids", \());
-    $self->set("to_message_ids", \());
-    $self->set("diff", \());
-
     my $folder_repl = $folder;
     $folder_repl =~ s/$fseperator/\./g;
     my $to_folder = $self->get("prefix").".$folder_repl";
     $self->log(1, "Handling folder $folder\n");
-    $self->read_from_imap_folder($from, $folder, $to);      #fill the from message_ids.
-    $self->read_to_imap_folder($to, $to_folder, $from);     #fill the message_ids already there.
-    $self->filter_already_there();                          #filter out the messages already archived
-    $self->copy_remaining($from, $to, $folder, $to_folder); #copy what needs to be copied.
+    my $from_hash = $self->read_from_imap_folder($from, $folder, $to);  #fill the from message_ids.
+    my $to_hash = $self->read_to_imap_folder($to, $to_folder, $from);   #fill the message_ids already there.
+    my $diff_hash = $self->filter_already_there($from_hash, $to_hash);  #filter out the messages already archived
+    $self->copy_remaining($from, $to, $folder, $to_folder, $diff_hash); #copy what needs to be copied.
     $fcounter++;
 }
 $self->log(1, "handled $fcounter folders to Mailarchief\n");
@@ -141,9 +134,7 @@ $self->log(1, "handled $fcounter folders to Mailarchief\n");
 
 sub read_from_imap_folder {
     my $self = shift;
-    my $imap = shift;
-    my $folder = shift;
-    my $to_imap = shift;
+    my ($imap, $folder, $to_imap) = @_;
 
     my %from_message_ids;
 
@@ -175,7 +166,7 @@ sub read_from_imap_folder {
         }
     }
     $self->log(3, Dumper \%from_message_ids);
-    $self->set("from_message_ids", \%from_message_ids);
+    return \%from_message_ids;
 }
 
 ##################################################################
@@ -190,34 +181,32 @@ sub read_from_imap_folder {
 
 sub read_to_imap_folder {
     my $self = shift;
-    my $imap = shift;
-    my $to_folder = shift;
-    my $from_imap = shift;
+    my ($to_imap, $to_folder, $from_imap)  = @_;
 
     my %to_message_ids;
 
-    my @to_folders = $imap->folders();
+    my @to_folders = $to_imap->folders();
 
     my @folderexists = grep { $_ eq $to_folder } @to_folders;
     if (!@folderexists) {
-        my $res = $imap->create_folder($to_folder) or die "Could not create imap folder $to_folder\n";
+        my $res = $to_imap->create_folder($to_folder) or die "Could not create imap folder $to_folder\n";
         $self->log(1,"Folder $to_folder created on mail archive\n");
     } else {
         $self->log(1, "Using existing folder $to_folder\n");
     }
 
-    my $fres = $imap->select($to_folder);
-    my $status = $imap->status($to_folder);
+    my $fres = $to_imap->select($to_folder);
+    my $status = $to_imap->status($to_folder);
     $self->log(3, Dumper $status);
 
     #fetch the messages already present in the archive.
     #and store their ids in a hash
-    my $to_folder_msgs = $imap->search('ALL');
+    my $to_folder_msgs = $to_imap->search('ALL');
     my $msgcount = (defined $to_folder_msgs) ? @$to_folder_msgs : 0;
     $self->log(2,"Found $msgcount messages in $to_folder on archive server\n");
     my $teller = 0;
     foreach my $message (@$to_folder_msgs) {
-        my $summaries = $imap->get_summaries($message);
+        my $summaries = $to_imap->get_summaries($message);
         if (scalar @$summaries > 1) {
             die "multiple records returned, unexpected\n";
         }
@@ -233,7 +222,7 @@ sub read_to_imap_folder {
             $teller = 0;
         }
     }
-    $self->set("to_message_ids", \%to_message_ids);
+    return \%to_message_ids;
 }
 
 ##################################################################
@@ -246,9 +235,8 @@ sub read_to_imap_folder {
 
 sub filter_already_there {
     my $self = shift;
+    my ($from_message_ids, $to_message_ids) = @_;
 
-    my $to_message_ids = $self->get("to_message_ids");
-    my $from_message_ids = $self->get("from_message_ids");
     foreach my $msgid (values %$to_message_ids) {
         $self->log(2,"expecting to delete msgid $msgid\n");
         if (exists $from_message_ids->{$msgid}) {
@@ -256,7 +244,7 @@ sub filter_already_there {
             $self->log(2,"message $msgid already located on imap, was from-imap messageid $val\n");
         }
     }
-    $self->set("diff", $from_message_ids);
+    return $from_message_ids;
 }
 
 ##################################################################
@@ -270,30 +258,32 @@ sub filter_already_there {
 
 sub copy_remaining {
     my $self = shift;
-    my $from_imap = shift;
-    my $to_imap   = shift;
-    my $from_folder = shift;
-    my $to_folder = shift;
+    my ($from_imap, $to_imap, $from_folder, $to_folder, $diff) = @_;
 
     #take care that we are using the right folders...
     my $fres = $from_imap->select($from_folder);
     my $from_status = $from_imap->status($from_folder);
     my $to_res = $to_imap->select($to_folder);
     my $to_status = $to_imap->status($to_folder);
-    my $diff = $self->get("diff");
     my $teller=0;
 
-    foreach my $message (sort { $a <=> $b } values %$diff) {
+    my %unique;
+    foreach my $index (values %$diff) {
+        $unique{$index} = 1;
+    }
+
+    foreach my $message (sort { $a <=> $b } keys %unique) {
         $self->log(2,"Going to copy from imap folder $from_folder message nbr $message\n");
         my $summary = $from_imap->get_summaries($message);
         my $fmtdate = $summary->[0]->{internaldate};
         my $mess    = $from_imap->get_rfc822_body($message);
         my $flags   = $from_imap->get_flags($message);
-        
+
         $to_imap->append($to_folder, $mess, $flags, $fmtdate);
         $teller++;
     }
     $self->log(1,"Done copying folder $from_folder: $teller messages copied to archive\n");
+    return $teller;
 }
 
 1;

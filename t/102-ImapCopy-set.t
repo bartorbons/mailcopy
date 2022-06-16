@@ -23,9 +23,6 @@ my $expect = {
     prefix           => $prefix,
     folder_separator => $folder_separator,
     debug            => $debug,
-    diff             => undef,
-    from_message_ids => undef,
-    to_message_ids   => undef,
 };
 
 use_ok($package);

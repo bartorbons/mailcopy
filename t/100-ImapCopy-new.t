@@ -31,18 +31,6 @@ my $imapcopy = ImapCopy->new(
 );
 isa_ok($imapcopy, $package, "Correctly create package");
 
-my $ic2 = ImapCopy->new(
-    from             => $from,
-    to               => $to,
-    prefix           => $prefix,
-    folder_separator => $folder_separator,
-    debug            => $debug,
-    diff             => \{},
-    from_message_ids => \{},
-    to_message_ids   => \{}
-);
-isa_ok($ic2, $package, "Correctly create package also with option arguments");
-
 throws_ok(
     sub { my $im2 = ImapCopy->new(
             from             => $from,

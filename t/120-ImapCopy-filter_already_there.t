@@ -40,13 +40,9 @@ note "calculate the work to do (lists are equal)";
         'message2' => 2
     };
 
-    $imapcopy->set("to_message_ids", $to_hash);
-    $imapcopy->set("from_message_ids", $from_hash);
-
-    my $res = $imapcopy->filter_already_there;
+    my $res = $imapcopy->filter_already_there($from_hash, $to_hash);
     my $expect = {};
     is_deeply($res, $expect, "expected result");
-    is_deeply($imapcopy->get("diff"), $expect, "expected result stored in diff");
 }
 
 note "calculate the work to do (from list is longer)";
@@ -68,13 +64,9 @@ note "calculate the work to do (from list is longer)";
         'message3' => 3
     };
 
-    $imapcopy->set("to_message_ids", $to_hash);
-    $imapcopy->set("from_message_ids", $from_hash);
-
-    my $res = $imapcopy->filter_already_there;
+    my $res = $imapcopy->filter_already_there($from_hash, $to_hash);
     my $expect = { 'message3' => 3 };
     is_deeply($res, $expect, "expected result");
-    is_deeply($imapcopy->get("diff"), $expect, "expected result stored in diff");
 }
 
 note "calculate the work to do (to list is longer)";
@@ -96,13 +88,9 @@ note "calculate the work to do (to list is longer)";
         'message2' => 2,
     };
 
-    $imapcopy->set("to_message_ids", $to_hash);
-    $imapcopy->set("from_message_ids", $from_hash);
-
-    my $res = $imapcopy->filter_already_there;
+    my $res = $imapcopy->filter_already_there($from_hash, $to_hash);
     my $expect = { };
     is_deeply($res, $expect, "expected result");
-    is_deeply($imapcopy->get("diff"), $expect, "expected result stored in diff");
 }
 
 note "calculate the work to do (to list is empty)";
@@ -120,16 +108,12 @@ note "calculate the work to do (to list is empty)";
         'message2' => 2,
     };
 
-    $imapcopy->set("to_message_ids", $to_hash);
-    $imapcopy->set("from_message_ids", $from_hash);
-
-    my $res = $imapcopy->filter_already_there;
+    my $res = $imapcopy->filter_already_there($from_hash, $to_hash);
     my $expect = { 
         'message1' => 1,
         'message2' => 2,
     };
     is_deeply($res, $expect, "expected result");
-    is_deeply($imapcopy->get("diff"), $expect, "expected result stored in diff");
 }
 note "calculate the work to do (from list is empty)";
 {
@@ -147,13 +131,9 @@ note "calculate the work to do (from list is empty)";
     my $from_hash = {
     };
 
-    $imapcopy->set("to_message_ids", $to_hash);
-    $imapcopy->set("from_message_ids", $from_hash);
-
-    my $res = $imapcopy->filter_already_there;
+    my $res = $imapcopy->filter_already_there($from_hash, $to_hash);
     my $expect = {};
     is_deeply($res, $expect, "expected result");
-    is_deeply($imapcopy->get("diff"), $expect, "expected result stored in diff");
 }
 
 done_testing();

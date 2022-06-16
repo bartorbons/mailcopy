@@ -63,8 +63,6 @@ note "Sunny day test";
         'message2' => 2
     };
     is_deeply($res, $expect, "the return value is as expected");
-    is_deeply($imapcopy->get("from_message_ids"),
-        $expect, "the internal from-imapfolder-administration is correct");
 }
 
 note "Sunny day test, empty folder";
@@ -84,8 +82,6 @@ note "Sunny day test, empty folder";
     my $res    = $imapcopy->read_from_imap_folder($from, "fldr", $to);
     my $expect = {};
     is_deeply($res, $expect, "the return value is as expected");
-    is_deeply($imapcopy->get("from_message_ids"),
-        $expect, "the internal from-imapfolder-administration is correct");
 }
 
 note "Fail test, Weird result from get_summaries";
